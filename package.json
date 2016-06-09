@@ -1,8 +1,8 @@
 {
-  "name": "startapp-email-service",
+  "name": "pub-stats-sdp",
   "version": "0.0.0",
   "description": "",
-  "main": "./email.service.js",
+  "main": "./query.js",
   "author": "",
   "engines": {
     "node": "*"
