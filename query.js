@@ -21,8 +21,7 @@ module.exports = function(urlConfig, fieldMapping){
             aggregatedRow[key] = aggregatedRow[key] && Number(aggregatedRow[key].toFixed(config.maxDecimalPlaces));
         });
         if(aggregatedRow.eDate){
-            aggregatedRow.eDate = aggregatedRow.eDate.replace(/-/g,"");
-            aggregatedRow.date=eDate;
+            aggregatedRow.date = aggregatedRow.eDate = aggregatedRow.eDate.replace(/-/g,"");
         }
         var omit=[];
         _.each(aggregatedRow, (value,key)=>{
