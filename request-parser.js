@@ -5,9 +5,7 @@ var _ = require('lodash'),
     config = require('./config'),
     logMessages = require('./log-messages');
 
-module.exports = function(logger, fieldSettings) {
-
-    var fieldMapping = fieldSettings.mappings;
+module.exports = function(logger, fieldMapping) {
 
     /**
      * returns value from req. querystring, if not exists then tries req. body

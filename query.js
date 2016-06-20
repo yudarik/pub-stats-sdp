@@ -7,8 +7,7 @@ var config = require('./config'),
     querystring = require("querystring"),
     q = require('q');
 
-module.exports = function(urlConfig, fieldSettings){
-    var fieldMapping = fieldSettings.mappings;
+module.exports = function(urlConfig, fieldMapping){
 
     function proccessRow(aggregatedRow) {
 
@@ -23,6 +22,7 @@ module.exports = function(urlConfig, fieldSettings){
         });
         if(aggregatedRow.eDate){
             aggregatedRow.eDate = aggregatedRow.eDate.replace(/-/g,"");
+            aggregatedRow.date=eDate;
         }
         var omit=[];
         _.each(aggregatedRow, (value,key)=>{
@@ -46,6 +46,9 @@ module.exports = function(urlConfig, fieldSettings){
         //query.publisherId = "109630816";
 
         //query.publisherId = "104602676";
+
+        //console.log(">>>>>>>>>>>>",urlConfig.url+config.apiName+"?"+querystring.stringify(query))
+
 
         request.get({
             url: urlConfig.url+config.apiName+"?"+querystring.stringify(query),
