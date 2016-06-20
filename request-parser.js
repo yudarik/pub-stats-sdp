@@ -24,33 +24,36 @@ module.exports = function(logger, fieldMapping) {
     }
 
     function parseDimensions(req) {
-        var dimensions = [];
+
+        var dimensions=[];
 
         //Parse query string
         if (getParam(req, 'dimension')) {
-            dimensions = _.map(getParam(req, 'dimension').split(','), dim=> {
-                _.each(fieldMapping, (value, key)=> {
-                    if (dim === value) {
-                        dim = key;
-                    }
-                });
-                return dim;
-            });
+
+            dimensions = getParam(req, 'dimension').split(',');
+
+            _.pull(dimensions, 'showLatestIfOnly');
+
             if (_.includes(dimensions, '-date')) { //Disable default dimension
                 _.pull(dimensions, '-date');
-                if (dimensions.length === 0) {
-                    dimensions.push('total');
-                }
-            } else { //Set default dimension
-                dimensions.push('eDate');
+
             }
+            else{
+                dimensions.push(fieldMapping.eDate);
+            }
+
+            dimensions = _.map(dimensions, dim=> {
+                var translatedDim=null;
+                _.each(fieldMapping, (value, key)=> {
+                    if (dim === value) {
+                        translatedDim = key;
+                    }
+                });
+                return translatedDim?translatedDim:null;
+            });
 
         } else { //Set default dimension
             dimensions = ['eDate'];
-        }
-
-        if (getParam(req, 'portalUI') === 'true') {
-            dimensions = ['combined'];
         }
 
         return dimensions;
@@ -61,7 +64,6 @@ module.exports = function(logger, fieldMapping) {
         var filters = {};
 
         //Parse query string
-
         _.each(fieldMapping, (translated, key)=> {
             if (getParam(req, translated)) {
                 filters[key] = getParam(req, translated).split(',');
@@ -75,10 +77,8 @@ module.exports = function(logger, fieldMapping) {
             if (req.profile) filters.publisherId = getUserIdOrSubAccounts(req.profile); //req.profile.userId; //Website
             else filters.publisherId = [getParam(req, 'partner')]; //API
         }
-
         return filters;
     }
-
 
     function getUserIdOrSubAccounts(user) {
         if (user.hasSubAccounts) {
@@ -90,20 +90,15 @@ module.exports = function(logger, fieldMapping) {
         }
     }
 
-
     function parseSort(req) {
-
         var sort = {};
-
         if (getParam(req, 'sortBy')) {
             _.forEach(getParam(req, 'sortBy').split(','), function (sortField) {
-
                 if (sortField[0] === '-') {
                     sort[sortField.substring(1)] = -1;
                 } else {
                     sort[sortField] = 1;
                 }
-
             });
         } else if (getParam(req, 'dimension') && !_.includes(getParam(req, 'dimension').split(','), '-date')) { //Add default sorting of default dimension if applied
             sort['day'] = 1;
@@ -142,13 +137,6 @@ module.exports = function(logger, fieldMapping) {
             }
         });
 
-        //dimension limiting is gone in new versions
-        /* var notAllowedDimensionsCombinations = ['country', 'connectionType', 'deviceType'];
-         var intersected = _.intersection(requestQuery.dimensions, notAllowedDimensionsCombinations);
-         if (intersected.length > 1) {
-         logs.push('SA110');
-         }*/
-
         //Limit
         if (requestQuery.limit > config.maxResults) {
             logs.push('SA112');
@@ -182,6 +170,7 @@ module.exports = function(logger, fieldMapping) {
             startDate: (getParam(req, 'startDate') ? moment.utc(getParam(req, 'startDate'), 'YYYYMMDD').format("YYYY-MM-DD") : false),
             endDate: (getParam(req, 'endDate') ? moment.utc(getParam(req, 'endDate'), 'YYYYMMDD').format("YYYY-MM-DD") : false),
             dimension: parseDimensions(this.req),
+            combine: getParam(req, 'portalUI') === 'true',
             limit: getParam(req, 'limit') ? Number(getParam(req, 'limit')) : config.maxResults,
             showLatestIfOnly: getParam(req, 'showLatestIfOnly')
         }, parseFilters(this.req));
@@ -211,7 +200,5 @@ module.exports = function(logger, fieldMapping) {
     };
 
     //Export object
-    //module.exports = requestParser;
-
     return requestParser;
 };

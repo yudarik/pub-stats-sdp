@@ -7,9 +7,17 @@ var config = require('./config'),
     querystring = require("querystring"),
     q = require('q');
 
-module.exports = function(urlConfig, fieldMapping){
+module.exports = function(urlConfig, fieldMapping, customRowProcess){
 
-    function proccessRow(aggregatedRow) {
+    function proccessRow(aggregatedRow, dimension) {
+
+        if(dimension){
+            _.each(dimension, dim=>{
+                if(!aggregatedRow[dim]){
+                    aggregatedRow[dim]="Unknown";
+                }
+            });
+        }
 
         aggregatedRow.fillrate = (aggregatedRow.requests > 0) ? (aggregatedRow.adResponses / aggregatedRow.requests) : 0;
         aggregatedRow.ctr = (aggregatedRow.impressions > 0) ? (aggregatedRow.clicks / aggregatedRow.impressions) : 0;
@@ -21,33 +29,25 @@ module.exports = function(urlConfig, fieldMapping){
             aggregatedRow[key] = aggregatedRow[key] && Number(aggregatedRow[key].toFixed(config.maxDecimalPlaces));
         });
         if(aggregatedRow.eDate){
-            aggregatedRow.date = aggregatedRow.eDate = aggregatedRow.eDate.replace(/-/g,"");
+            aggregatedRow.eDate = aggregatedRow.eDate.replace(/-/g,"");
+            aggregatedRow.date = Number(aggregatedRow.eDate)
         }
-        var omit=[];
-        _.each(aggregatedRow, (value,key)=>{
 
+        _.each(aggregatedRow, (value,key)=>{
             if(fieldMapping[key]){
                 aggregatedRow[fieldMapping[key]]=value;
-                if(fieldMapping[key]!==key){
-                    omit.push(key);
-                }
             }
         });
-        aggregatedRow = _.omit(aggregatedRow, omit);
+
+        if(customRowProcess){
+            customRowProcess(aggregatedRow);
+        }
+
         return aggregatedRow;
     }
 
     function fetchData(query){
         var dfd = q.defer();
-
-        //query.publisherId = "112832612";
-
-        //query.publisherId = "109630816";
-
-        //query.publisherId = "104602676";
-
-        //console.log(">>>>>>>>>>>>",urlConfig.url+config.apiName+"?"+querystring.stringify(query))
-
 
         request.get({
             url: urlConfig.url+config.apiName+"?"+querystring.stringify(query),
@@ -63,7 +63,8 @@ module.exports = function(urlConfig, fieldMapping){
                     data.results=dataExceptEndDate
                 }
             }
-            dfd.resolve(_.map(data.results,proccessRow));
+
+            dfd.resolve(_.map(data.results,elm=>proccessRow(elm, query.dimension)));
         });
         return dfd.promise;
     }
@@ -71,7 +72,7 @@ module.exports = function(urlConfig, fieldMapping){
     return function (query, done) {
 
         var getDataPromise, logs=[];
-        if(query.dimension.indexOf("combined")>=0){
+        if(query.combine){
 
             getDataPromise = q.all(_.map([
                 'eDate',

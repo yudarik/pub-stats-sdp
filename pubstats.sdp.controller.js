@@ -3,10 +3,10 @@
 var path = require('path'),
     events = require('events');
 
-module.exports = function(logger, config, fieldMapping) {
+module.exports = function(logger, config, fieldMapping, customRowProcess) {
 
     var RequestParser = require('./request-parser.js')(logger, fieldMapping),
-        query = require('./query.js')(config, fieldMapping);
+        query = require('./query.js')(config, fieldMapping, customRowProcess);
 
     function validateAndExecute(res, requestParser) {
 
