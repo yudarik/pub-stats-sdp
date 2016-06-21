@@ -48,9 +48,9 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
 
     function fetchData(query){
         var dfd = q.defer();
-
+        
         request.get({
-            url: urlConfig.url+config.apiName+"?"+querystring.stringify(query),
+            url: urlConfig.url+config.apiName+"?"+querystring.stringify(_.extend({orderBy:query.dimension, sort:"ASC"},query)),
             json: true
         }, function (error, response, data) {
             if(error){
