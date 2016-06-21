@@ -74,14 +74,32 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
         var getDataPromise, logs=[];
         if(query.combine){
 
-            getDataPromise = q.all(_.map([
-                'eDate',
+            getDataPromise = fetchData(_.extend({},query,{dimension:["eDate"]}))
+
+            .then(eDateResults=>{
+                if(query.showLatestIfOnly){
+                    var endDate = query.endDate.replace(/-/g,'')
+                    var dataOfEndDate = _.filter(eDateResults,elm=>elm.eDate===endDate);
+                    if(dataOfEndDate.length){
+                        query.startDate = query.endDate
+                    }
+                    else if(query.startDate !== query.endDate){
+                        query.endDate = moment(query.endDate,"YYYY-MM-DD").subtract(1,"day").format("YYYY-MM-DD")
+                    }
+                }
+                return eDateResults;
+            })
+
+            .then(eDateResults=>q.all(_.map([
                 'country',
                 'product',
                 'deviceType',
                 'connectionType',
                 'adTypePortal'
             ], dim => fetchData(_.extend({},query,{dimension:[dim]})).then(data=>({dim,data}))))
+
+            .then(theRest=>[{dim:'eDate',data:eDateResults}].concat(theRest)))
+
             .then(result=>{
                 var data={};
                 _.each(result,res4dim=>{
@@ -97,7 +115,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
                     "requests": 0,
                     "payableClicks": 0
                 }];
-                _.each(data[fieldMapping.deviceType], row=>{
+                _.each(data[fieldMapping.eDate], row=>{
                     _.each(data.total[0], (val,prop)=>{
                         data.total[0][prop]+=row[prop];
                     })
