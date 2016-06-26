@@ -48,9 +48,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
 
     function fetchData(query){
         var dfd = q.defer();
-
         var urlSuffix = config.apiName+"?"+querystring.stringify(_.extend({orderBy:query.dimension, sort:"ASC"},query));
-
         var fetchMethod;
 
         if(urlSuffix.length<4000){
