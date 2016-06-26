@@ -48,11 +48,28 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
 
     function fetchData(query){
         var dfd = q.defer();
-        
-        request.get({
-            url: urlConfig.url+config.apiName+"?"+querystring.stringify(_.extend({orderBy:query.dimension, sort:"ASC"},query)),
-            json: true
-        }, function (error, response, data) {
+
+        var urlSuffix = config.apiName+"?"+querystring.stringify(_.extend({orderBy:query.dimension, sort:"ASC"},query));
+
+        var fetchMethod;
+
+        if(urlSuffix.length<4000){
+            fetchMethod = request.get.bind(request, {
+                url: urlConfig.url + urlSuffix,
+                json: true
+            });
+        }
+        else{
+            fetchMethod = request.bind(request,{
+                url: urlConfig.url+config.apiName,
+                method: 'POST',
+                body: _.extend({orderBy:query.dimension[0],sort:"ASC"},query),
+                json: true
+            });
+        }
+
+        fetchMethod(function (error, response, data) {
+
             if(error){
                 return dfd.reject(error);
             }
@@ -66,6 +83,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
 
             dfd.resolve(_.map(data.results,elm=>proccessRow(elm, query.dimension)));
         });
+
         return dfd.promise;
     }
 
