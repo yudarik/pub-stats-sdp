@@ -46,7 +46,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
         return aggregatedRow;
     }
 
-    function fetchData(query){
+    function fetchData(query, logs){
         var dfd = q.defer();
         var urlSuffix = config.apiName+"?"+querystring.stringify(_.extend({orderBy:query.dimension, sort:"ASC"},query));
         var fetchMethod;
@@ -79,7 +79,22 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
                 }
             }
 
-            dfd.resolve(_.map(data.results,elm=>proccessRow(elm, query.dimension)));
+            var finalResults = _.map(data.results,elm=>proccessRow(elm, query.dimension))
+
+            if (finalResults.length === query.limit) {
+                if (finalResults.length === config.maxResults+1){
+                    if(logs.indexOf('SA112')===-1){
+                        logs.push('SA112');
+                    }
+                }
+                else if(logs.indexOf('SA111')===-1){
+                    logs.push('SA111');
+                }
+
+                finalResults.pop();
+            }
+
+            dfd.resolve(finalResults);
         });
 
         return dfd.promise;
@@ -90,7 +105,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
         var getDataPromise, logs=[];
         if(query.combine){
 
-            getDataPromise = fetchData(_.extend({},query,{dimension:["eDate"]}))
+            getDataPromise = fetchData(_.extend({},query,{dimension:["eDate"]}), logs)
 
             .then(eDateResults=>{
                 if(query.showLatestIfOnly){
@@ -112,7 +127,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
                 'deviceType',
                 'connectionType',
                 'adTypePortal'
-            ], dim => fetchData(_.extend({},query,{dimension:[dim]})).then(data=>({dim,data}))))
+            ], dim => fetchData(_.extend({},query,{dimension:[dim]}), logs).then(data=>({dim,data}))))
 
             .then(theRest=>[{dim:'eDate',data:eDateResults}].concat(theRest)))
 
@@ -142,14 +157,11 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
             });
         }
         else {
-            getDataPromise = fetchData(query);
+            getDataPromise = fetchData(query, logs);
         }
 
         getDataPromise.then(data=>{
-            if (data.length > query.limit) {
-                data.pop();
-                logs.push('SA111');
-            }
+
             done(logs,data);
         },err=>{
             logs.push('SA101');

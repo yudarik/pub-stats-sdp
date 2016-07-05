@@ -137,12 +137,6 @@ module.exports = function(logger, fieldMapping) {
             }
         });
 
-        //Limit
-        if (requestQuery.limit > config.maxResults) {
-            logs.push('SA112');
-            requestQuery.limit = config.maxResults;
-        }
-
         //Done
         return logs;
     }
@@ -171,7 +165,7 @@ module.exports = function(logger, fieldMapping) {
             endDate: (getParam(req, 'endDate') ? moment.utc(getParam(req, 'endDate'), 'YYYYMMDD').format("YYYY-MM-DD") : false),
             dimension: parseDimensions(this.req),
             combine: getParam(req, 'portalUI') === 'true',
-            limit: getParam(req, 'limit') ? Number(getParam(req, 'limit')) : config.maxResults,
+            limit:getParam(req, 'limit')?Math.min(  Number(getParam(req, 'limit'))+1,config.maxResults+1  ):config.maxResults+1,
             showLatestIfOnly: getParam(req, 'showLatestIfOnly')
         }, parseFilters(this.req));
 
