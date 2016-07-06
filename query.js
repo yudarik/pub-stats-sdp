@@ -4,6 +4,7 @@ var config = require('./config'),
     _ = require('lodash'),
     moment = require('moment'),
     request = require("request"),
+    orderByIgnore = require("./orderByIgnore"),
     querystring = require("querystring"),
     q = require('q');
 
@@ -46,9 +47,12 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
         return aggregatedRow;
     }
 
-    function fetchData(query, logs){
+    function fetchData(query){
+
+        var orderBy = _.without.apply(_, query.dimension, orderByIgnore);
+
         var dfd = q.defer();
-        var urlSuffix = config.apiName+"?"+querystring.stringify(_.extend({orderBy:query.dimension, sort:"ASC"},query));
+        var urlSuffix = config.apiName+"?"+querystring.stringify(_.extend({orderBy, sort:"ASC"},query));
         var fetchMethod;
 
         if(urlSuffix.length<4000){
@@ -61,7 +65,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
             fetchMethod = request.bind(request,{
                 url: urlConfig.url+config.apiName,
                 method: 'POST',
-                body: _.extend({orderBy:query.dimension[0],sort:"ASC"},query),
+                body: _.extend({orderBy,sort:"ASC"},query),
                 json: true
             });
         }
@@ -79,22 +83,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
                 }
             }
 
-            var finalResults = _.map(data.results,elm=>proccessRow(elm, query.dimension))
-
-            if (finalResults.length === query.limit) {
-                if (finalResults.length === config.maxResults+1){
-                    if(logs.indexOf('SA112')===-1){
-                        logs.push('SA112');
-                    }
-                }
-                else if(logs.indexOf('SA111')===-1){
-                    logs.push('SA111');
-                }
-
-                finalResults.pop();
-            }
-
-            dfd.resolve(finalResults);
+            dfd.resolve(_.map(data.results,elm=>proccessRow(elm, query.dimension)));
         });
 
         return dfd.promise;
@@ -105,7 +94,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
         var getDataPromise, logs=[];
         if(query.combine){
 
-            getDataPromise = fetchData(_.extend({},query,{dimension:["eDate"]}), logs)
+            getDataPromise = fetchData(_.extend({},query,{dimension:["eDate"]}))
 
             .then(eDateResults=>{
                 if(query.showLatestIfOnly){
@@ -127,7 +116,7 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
                 'deviceType',
                 'connectionType',
                 'adTypePortal'
-            ], dim => fetchData(_.extend({},query,{dimension:[dim]}), logs).then(data=>({dim,data}))))
+            ], dim => fetchData(_.extend({},query,{dimension:[dim]})).then(data=>({dim,data}))))
 
             .then(theRest=>[{dim:'eDate',data:eDateResults}].concat(theRest)))
 
@@ -157,11 +146,14 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
             });
         }
         else {
-            getDataPromise = fetchData(query, logs);
+            getDataPromise = fetchData(query);
         }
 
         getDataPromise.then(data=>{
-
+            if (data.length > query.limit) {
+                data.pop();
+                logs.push('SA111');
+            }
             done(logs,data);
         },err=>{
             logs.push('SA101');
