@@ -77,21 +77,6 @@ module.exports = function(logger, fieldMapping) {
             if (req.profile) filters.publisherId = getUserIdOrSubAccounts(req.profile); //req.profile.userId; //Website
             else filters.publisherId = [getParam(req, 'partner')]; //API
         }
-
-        if(filters.adTypePortal){
-            var portalAdTypes = {
-                0: 'Banner',
-                1: 'Return Ad',
-                2: 'Native',
-                3: 'Interstitial',
-                4: 'Splash',
-                5: 'Slider',
-            }
-            filters.adTypePortal = filters.adTypePortal.map(num=>{
-                return portalAdTypes[num]
-            });
-        }
-
         return filters;
     }
 
@@ -183,9 +168,6 @@ module.exports = function(logger, fieldMapping) {
             limit:getParam(req, 'limit')?Math.min(  Number(getParam(req, 'limit'))+1,config.maxResults+1  ):config.maxResults+1,
             showLatestIfOnly: getParam(req, 'showLatestIfOnly')
         }, parseFilters(this.req));
-
-        logger.info('Query:');
-        logger.info(JSON.stringify(this.query, null, 4));
 
         this.logMessages = validateQuery(this.query);
     }

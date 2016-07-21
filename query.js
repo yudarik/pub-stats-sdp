@@ -8,7 +8,7 @@ var config = require('./config'),
       orderByIgnore = require("./orderByIgnore"),
     q = require('q');
 
-module.exports = function(urlConfig, fieldMapping, customRowProcess){
+module.exports = function(urlConfig, fieldMapping, logger, customRowProcess){
 
     function proccessRow(aggregatedRow, dimension) {
 
@@ -54,24 +54,33 @@ module.exports = function(urlConfig, fieldMapping, customRowProcess){
         var fetchMethod;
 
         if(urlSuffix.length<4000){
+
+            logger.info('GET request to SDP:',urlConfig.url + urlSuffix);
+
             fetchMethod = request.get.bind(request, {
                 url: urlConfig.url + urlSuffix,
                 json: true
             });
         }
         else{
+            var body = _.extend({orderBy,sort:"ASC"},query);
+
+            logger.info('POST request to SDP:',urlConfig.url, JSON.stringify(body, null, 4));
+
             fetchMethod = request.bind(request,{
                 url: urlConfig.url+config.apiName,
                 method: 'POST',
-                body: _.extend({orderBy,sort:"ASC"},query),
+                body,
                 json: true
             });
         }
 
         fetchMethod(function (error, response, data) {
-
             if(error){
                 return dfd.reject(error);
+            }
+            if(response.statusCode!==200){
+                logger.error("response code returned not successful: "+response.statusCode);
             }
             if(query.showLatestIfOnly){
                 var endDate = query.endDate.replace(/-/g,'')

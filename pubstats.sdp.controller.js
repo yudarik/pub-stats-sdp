@@ -6,7 +6,7 @@ var path = require('path'),
 module.exports = function(logger, config, fieldMapping, customRowProcess) {
 
     var RequestParser = require('./request-parser.js')(logger, fieldMapping),
-        query = require('./query.js')(config, fieldMapping, customRowProcess);
+        query = require('./query.js')(config, fieldMapping, logger, customRowProcess);
 
     function validateAndExecute(res, requestParser) {
 
@@ -32,6 +32,8 @@ module.exports = function(logger, config, fieldMapping, customRowProcess) {
     }
 
     function queryExecutor(req, res) {
+
+        logger.info("request to pub API:","portal.startapp.com"+req.url);
 
         //Parse & validate the request
         var requestParser = new RequestParser(req);
