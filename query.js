@@ -47,6 +47,26 @@ module.exports = function(urlConfig, fieldMapping, logger, customRowProcess){
         return aggregatedRow;
     }
 
+    function getTotal(data){
+        var total=[{
+            "adResponses": 0,
+            "clicks": 0,
+            "impressions": 0,
+            "installs": 0,
+            "revenue": 0,
+            "requests": 0,
+            "payableClicks": 0
+        }];
+        _.each(data, row=>{
+            _.each(total[0], (val,prop)=>{
+                total[0][prop]+=row[prop];
+            })
+        });
+        proccessRow(total[0]);
+
+        return total;
+    }
+
     function fetchData(query, logs){
         var orderBy = _.without.apply(_, query.dimension, orderByIgnore);
         var dfd = q.defer();
@@ -147,32 +167,26 @@ module.exports = function(urlConfig, fieldMapping, logger, customRowProcess){
                 _.each(result,res4dim=>{
                     data[fieldMapping[res4dim.dim]]=res4dim.data
                 });
-
-                data.total=[{
-                    "adResponses": 0,
-                    "clicks": 0,
-                    "impressions": 0,
-                    "installs": 0,
-                    "revenue": 0,
-                    "requests": 0,
-                    "payableClicks": 0
-                }];
-                _.each(data[fieldMapping.eDate], row=>{
-                    _.each(data.total[0], (val,prop)=>{
-                        data.total[0][prop]+=row[prop];
-                    })
-                });
-                proccessRow(data.total[0]);
-
+                data.total = getTotal(data[fieldMapping.eDate]);
                 return data;
             });
         }
         else {
-            getDataPromise = fetchData(query, logs);
+            getDataPromise = fetchData(query, logs)
+            .then(data=>{
+                if(query.fetchTotal){
+                    return{
+                        data,
+                        total:getTotal(data)
+                    };
+                }
+                else{
+                    return data;
+                }
+            });
         }
 
         getDataPromise.then(data=>{
-
             done(logs,data);
         },err=>{
             logs.push('SA101');
