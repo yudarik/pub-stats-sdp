@@ -102,13 +102,6 @@ module.exports = function(urlConfig, fieldMapping, logger, customRowProcess){
             if(response.statusCode!==200){
                 logger.error("response code returned not successful: "+response.statusCode);
             }
-            if(query.showLatestIfOnly){
-                var endDate = query.endDate.replace(/-/g,'')
-                var dataExceptEndDate = _.filter(data.results,elm=>elm.eDate!==endDate);
-                if(dataExceptEndDate.length) {
-                    data.results=dataExceptEndDate
-                }
-            }
 
             var finalResults = _.map(data.results,elm=>proccessRow(elm, query.dimension))
 
@@ -136,31 +129,17 @@ module.exports = function(urlConfig, fieldMapping, logger, customRowProcess){
         var getDataPromise, logs=[];
         if(query.combine){
 
-            getDataPromise = fetchData(_.extend({},query,{dimension:["eDate"]}), logs)
-
-            .then(eDateResults=>{
-                if(query.showLatestIfOnly){
-                    var endDate = query.endDate.replace(/-/g,'')
-                    var dataOfEndDate = _.filter(eDateResults,elm=>elm.eDate===endDate);
-                    if(dataOfEndDate.length){
-                        query.startDate = query.endDate
-                    }
-                    else if(query.startDate !== query.endDate){
-                        query.endDate = moment(query.endDate,"YYYY-MM-DD").subtract(1,"day").format("YYYY-MM-DD")
-                    }
-                }
-                return eDateResults;
-            })
-
-            .then(eDateResults=>q.all(_.map([
+            getDataPromise = q.all(_.map([
+                'eDate',
                 'country',
                 'product',
                 'deviceType',
                 'connectionType',
                 'adTypePortal'
-            ], dim => fetchData(_.extend({},query,{dimension:[dim]}), logs).then(data=>({dim,data}))))
-
-            .then(theRest=>[{dim:'eDate',data:eDateResults}].concat(theRest)))
+            ], dim =>
+                fetchData(_.extend({},query,{dimension:[dim]}), logs)
+                .then(data=>({dim,data}))
+            ))
 
             .then(result=>{
                 var data={};

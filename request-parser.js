@@ -179,7 +179,6 @@ module.exports = function(logger, fieldMapping) {
             dimension: parseDimensions(this.req),
             combine: getParam(req, 'portalUI') === 'true',
             limit:getParam(req, 'limit')?Math.min(  Number(getParam(req, 'limit'))+1,config.maxResults+1  ):config.maxResults+1,
-            showLatestIfOnly: getParam(req, 'showLatestIfOnly'),
             fetchTotal: getParam(req, 'fetchTotal')
         }, parseFilters(this.req));
 
