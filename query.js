@@ -99,6 +99,10 @@ module.exports = function(urlConfig, fieldMapping, logger, customRowProcess){
             if(error){
                 return dfd.reject(error);
             }
+            if (!data && !data.results) {
+                logger.error("response contain no data from SDP");
+                return dfd.reject('No data to process - empty result');
+            }
             if(response.statusCode!==200){
                 logger.error("response code returned not successful: "+response.statusCode);
             }
